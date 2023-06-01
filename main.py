@@ -1,5 +1,5 @@
 from streamlit import title, checkbox, text_input, session_state, experimental_rerun, text, expander, subheader, \
-    write, form, form_submit_button
+    write, form, form_submit_button, sidebar, button
 from functions import get_tasks, add_task, update_tasks, get_date, set_date
 from datetime import datetime
 
@@ -19,7 +19,19 @@ def add_daily_task():
     add_task(task, FILEPATH_3)
 
 
+def delete_daily_task():
+    daily_tasks_to_delete = []
+    for index, task in enumerate(daily_tasks):
+        if session_state[f"d{index}"]:
+            daily_tasks_to_delete.append(index)
+    for index in reversed(daily_tasks_to_delete):
+        daily_tasks.pop(index)
+        del session_state[f"d{index}"]
+    update_tasks(daily_tasks, FILEPATH_3)
+
+
 incomplete_tasks = get_tasks(FILEPATH_1)
+daily_tasks = get_tasks(FILEPATH_3)
 stored_date, did_exist = get_date()
 if stored_date < datetime.now().date() or not did_exist:
     update_tasks([], FILEPATH_2)
@@ -31,9 +43,16 @@ if stored_date < datetime.now().date() or not did_exist:
     set_date()
 complete_tasks = get_tasks(FILEPATH_2)
 
-
 title("To-do List App")
 subheader("")
+
+with sidebar:
+    if daily_tasks:
+        subheader("Daily Tasks", help="Select tasks to delete them")
+        for index, task in enumerate(daily_tasks):
+            check_box = checkbox(task, key=f"d{index}")
+        button("DELETE", on_click=delete_daily_task)
+
 with expander("Incomplete Tasks", True):
     for index, task in enumerate(incomplete_tasks):
         check_box = checkbox(task, key=index)
@@ -44,11 +63,11 @@ with expander("Incomplete Tasks", True):
             del session_state[index]
             experimental_rerun()
 write("")
+
 with expander("Completed Tasks"):
     for task in complete_tasks:
         text(task)
 write("")
-
 
 with form("My form", clear_on_submit=True):
     text_input("new task name", placeholder="Add a new task",
